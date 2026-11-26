@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Deployment Guide: Full-Stack App with PM2 & Nginx</title>
+  <style>
+    :root {
+      --primary: #ea580c;
+      --primary-dark: #c2410c;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --code-bg: #090d16;
+      --accent: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 48px;
+      border-radius: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #ffedd5;
+      color: #c2410c;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+    h1 { font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+    h2 { font-size: 22px; font-weight: 700; color: #1e293b; margin: 32px 0 16px 0; border-left: 4px solid var(--primary); padding-left: 12px; }
+    h3 { font-size: 16px; font-weight: 700; color: #334155; margin: 20px 0 8px 0; }
+    p, li { font-size: 15px; color: #475569; margin-bottom: 12px; }
+    ul, ol { padding-left: 24px; margin-bottom: 16px; }
+    
+    /* Code Blocks */
+    pre {
+      background: var(--code-bg);
+      color: #f1f5f9;
+      padding: 16px 20px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13.5px;
+      line-height: 1.5;
+      margin: 12px 0 20px 0;
+      position: relative;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      background: #f1f5f9;
+      color: #ea580c;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    pre code { background: none; color: inherit; padding: 0; }
+    
+    /* Callout Boxes */
+    .callout {
+      background: #fff7ed;
+      border-left: 4px solid var(--primary);
+      padding: 16px;
+      border-radius: 0 12px 12px 0;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    .callout-success {
+      background: #ecfdf5;
+      border-left: 4px solid var(--accent);
+    }
+    .table-container {
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #334155;
+    }
+    .architecture-box {
+      background: #0f172a;
+      color: #94a3b8;
+      padding: 20px;
+      border-radius: 16px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    .print-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #ea580c;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-weight: 700;
+      border-radius: 12px;
+      box-shadow: 0 10px 15px -3px rgba(234, 88, 12, 0.4);
+      cursor: pointer;
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .print-btn:hover { transform: translateY(-2px); }
+    @media print {
+      body { padding: 0; background: white; }
+      .container { border: none; box-shadow: none; padding: 0; }
+      .print-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+  <div class="container">
+    <div class="header">
+      <div class="badge">Classroom Masterclass Guide</div>
+      <h1>Full-Stack Application Deployment</h1>
+      <p><strong>Stack:</strong> React 18 + Node.js (Express) + PostgreSQL + PM2 + Nginx</p>
+      <p><strong>Target Environment:</strong> Ubuntu Linux Server (VPS or Virtual Machine)</p>
+    </div>
+
+    <h2>1. Architecture Overview</h2>
+    <p>In modern production, we separate static file delivery from the API server and database:</p>
+
+    <div class="architecture-box">
+[ User's Web Browser ]
+         │  HTTP Port 80
+         ▼
+┌────────────────────────────────────────────────────────┐
+│ NGINX Web Server                                       │
+│  • Directly serves React static assets (dist/)         │
+│  • Reverse-proxies /api/* calls to Node.js on port 5000│
+└──────────────────────────┬─────────────────────────────┘
+                           │ Internal Proxy
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ PM2 Process Manager                                    │
+│  • Runs Node.js Express API in background (Port 5000)  │
+│  • Restarts on crashes, reboots, and updates           │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Internal Connection
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│ PostgreSQL Relational Database (Port 5432)             │
+│  • Stores Users, Menu Products, and Customer Orders    │
+└────────────────────────────────────────────────────────┘</div>
+
+    <h2>Step 1: Connect to Server & Install Software</h2>
+    <p>Connect to your remote Linux VPS using SSH:</p>
+    <pre><code>ssh root@YOUR_SERVER_IP</code></pre>
+
+    <p>Update system packages and install Git, Nginx, and build libraries:</p>
+    <pre><code>sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl git nginx build-essential</code></pre>
+
+    <p>Install Node.js 20 LTS and PM2 process manager:</p>
+    <pre><code># Install Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Install PM2 globally
+sudo npm install -g pm2
+pm2 -v</code></pre>
+
+    <h2>Step 2: Install & Configure PostgreSQL</h2>
+    <pre><code>sudo apt install -y postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql</code></pre>
+
+    <p>Create the database and dedicated user:</p>
+    <pre><code>sudo -u postgres psql</code></pre>
+    <p>Execute in SQL prompt:</p>
+    <pre><code>CREATE DATABASE food_order_db;
+CREATE USER fooduser WITH ENCRYPTED PASSWORD 'MySecurePassword123!';
+GRANT ALL PRIVILEGES ON DATABASE food_order_db TO fooduser;
+\q</code></pre>
+
+    <h2>Step 3: Clone Code from GitHub</h2>
+    <pre><code>sudo mkdir -p /var/www && sudo chown -R $USER:$USER /var/www
+cd /var/www
+git clone https://github.com/AbdurRehman5696/food-ordering-app.git
+cd food-ordering-app</code></pre>
+
+    <h2>Step 4: Configure Backend Environment</h2>
+    <pre><code>cd backend
+cp .env.example .env
+nano .env</code></pre>
+    <p>Set the PostgreSQL connection URL:</p>
+    <pre><code>PORT=5000
+DATABASE_URL="postgresql://fooduser:MySecurePassword123!@localhost:5432/food_order_db?schema=public"
+JWT_SECRET="my_super_secret_class_key_2026"
+CLIENT_URL="http://YOUR_SERVER_IP"</code></pre>
+
+    <h2>Step 5: Setup Backend & Run DB Migrations</h2>
+    <pre><code>npm install
+npx prisma generate
+npx prisma migrate dev --name init
+node src/seed.js     # Seeds initial products and demo student login
+cd ..</code></pre>
+
+    <h2>Step 6: Build React Frontend for Production</h2>
+    <pre><code>cd frontend
+npm install
+npm run build        # Compiles into frontend/dist/ folder
+cd ..</code></pre>
+
+    <h2>Step 7: Launch Backend with PM2</h2>
+    <p>Start the process using the included ecosystem configuration:</p>
+    <pre><code>pm2 start ecosystem.config.js
+pm2 status</code></pre>
+
+    <p>Configure PM2 to automatically restart after server reboots:</p>
+    <pre><code>pm2 startup systemd
+# Copy and run the command printed in terminal (starts with sudo env PATH=...)
+pm2 save</code></pre>
+
+    <h2>Step 8: Configure Nginx Web Server</h2>
+    <pre><code>sudo nano /etc/nginx/sites-available/food-ordering-app</code></pre>
+    <p>Paste the configuration:</p>
+    <pre><code>server {
+    listen 80;
+    server_name YOUR_SERVER_IP;
+
+    # 1. Serve compiled React frontend
+    root /var/www/food-ordering-app/frontend/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 2. Reverse proxy /api/ to PM2 Backend
+    location /api/ {
+        proxy_pass http://localhost:5000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}</code></pre>
+
+    <p>Enable and restart Nginx:</p>
+    <pre><code>sudo ln -s /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl restart nginx</code></pre>
+
+    <div class="callout callout-success">
+      <strong>🎉 Congratulations!</strong> Visit <code>http://YOUR_SERVER_IP</code> in your browser to view and interact with the live application.
+    </div>
+
+    <h2>Day-2 DevOps: Zero-Downtime Redeployment</h2>
+    <p>Whenever you push new code to GitHub, update the server with:</p>
+    <pre><code>cd /var/www/food-ordering-app
+git pull origin main
+cd backend && npm install && cd ..
+cd frontend && npm install && npm run build && cd ..
+pm2 reload cravingbites-backend</code></pre>
+
+    <h2>Essential PM2 Commands</h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Command</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>pm2 status</code></td>
+            <td>View status, CPU & memory usage of all processes</td>
+          </tr>
+          <tr>
+            <td><code>pm2 logs cravingbites-backend</code></td>
+            <td>Stream live application logs</td>
+          </tr>
+          <tr>
+            <td><code>pm2 reload cravingbites-backend</code></td>
+            <td>Reload server code with zero downtime</td>
+          </tr>
+          <tr>
+            <td><code>pm2 restart cravingbites-backend</code></td>
+            <td>Stop and restart the process</td>
+          </tr>
+          <tr>
+            <td><code>pm2 monit</code></td>
+            <td>Interactive dashboard inside terminal</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</body>
+</html>
