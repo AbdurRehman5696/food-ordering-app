@@ -1,120 +1,77 @@
 # 🍔 CravingBites — Full-Stack Ordering Application
 
-An animated full-stack food delivery application designed as a teaching resource for DevOps, cloud deployment, and modern full-stack development.
+An animated full-stack food delivery application built for teaching **Linux & PM2 deployment workflows** (cloning, dependency management, building assets, PM2 process supervision, and Nginx reverse proxying).
 
-![CravingBites Architecture](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20PostgreSQL%20%7C%20Docker-orange?style=for-the-badge)
-
----
-
-## 🌟 Application Features
-
-- **Authentication System**:
-  - Secure Registration & Login with `bcryptjs` password hashing and JWT (JSON Web Tokens).
-  - Instant form validation with error feedback.
-  - **⚡ 1-Click Demo Login (`student@example.com` / `student123`)** for immediate classroom testing.
-- **Dynamic Catalog & Search**:
-  - Real-time category filtering (Burgers, Pizzas, Drinks, Desserts).
-  - Search by name or description.
-- **Cart & Order Flow**:
-  - Slide-out Cart Drawer with quantity adjusters.
-  - Live calculations: Subtotal, Delivery Fee, Total.
-  - Delivery address input & payment method selection.
-  - **Animated Order Status Tracker**: Live visual simulation (`PLACED` ➔ `PREPARING` ➔ `ON THE WAY` ➔ `DELIVERED`).
-- **DevOps Ready**:
-  - Multi-stage Docker build for frontend (React + Nginx).
-  - Optimized Node.js 20 Alpine container for backend.
-  - PostgreSQL container with automatic healthchecks & persistent volume storage.
-  - Nginx reverse-proxy routing frontend & backend via standard HTTP port `80`.
+![CravingBites Tech Stack](https://img.shields.io/badge/Stack-React%2018%20%7C%20Node.js%20%7C%20PostgreSQL%20%7C%20PM2%20%7C%20Nginx-orange?style=for-the-badge)
 
 ---
 
-## 🏗️ Architecture
+## 🎯 What Students Learn in this Project
 
-```
-                       +-----------------------------------+
-                       |        Client Browser (Port 80)   |
-                       +-----------------+-----------------+
-                                         |
-                                         v
-                       +-----------------------------------+
-                       |     Nginx Web Server Container    |
-                       |  - Serves compiled React app      |
-                       |  - Reverse-proxies /api/ requests |
-                       +-----------------+-----------------+
-                                         |
-                                         v
-                       +-----------------------------------+
-                       |    Node.js / Express Container    |
-                       |             (Port 5000)           |
-                       |  - JWT Authentication             |
-                       |  - Products & Orders REST API     |
-                       |  - Prisma ORM                     |
-                       +-----------------+-----------------+
-                                         |
-                                         v
-                       +-----------------------------------+
-                       |       PostgreSQL Container        |
-                       |             (Port 5432)           |
-                       |  - Persistent storage volume      |
-                       +-----------------------------------+
-```
+1. **Git Workflow**: Cloning remote repositories to Linux servers and pulling updates.
+2. **Environment & Dependencies**: Setting up Node.js, npm, and environment variables (`.env`).
+3. **Database Setup**: PostgreSQL setup, Prisma ORM migrations, and database seeding.
+4. **Process Management with PM2**:
+   - Keeping the backend alive 24/7 without open terminals.
+   - Using `ecosystem.config.js` for process declaration.
+   - Managing lifecycle: `pm2 start`, `pm2 reload`, `pm2 logs`, `pm2 status`.
+   - Configuring systemd auto-restart on OS boot (`pm2 startup`, `pm2 save`).
+5. **Production Build & Nginx**:
+   - Compiling React via `npm run build`.
+   - Reverse proxying traffic: `/` served from static build, `/api/` forwarded to PM2 on port 5000.
 
 ---
 
-## 🚀 Quick Start (Docker Deployment)
+## 📱 App Highlights
 
-The fastest and cleanest way for students to run the entire stack on their laptop or cloud server:
+- **Auth**: Registration, Login, password hashing with `bcryptjs`, and JWT tokens.
+- **⚡ 1-Click Demo Login (`student@example.com` / `student123`)** for immediate classroom testing.
+- **Menu Catalog**: Category filter pills (Burgers, Pizzas, Drinks, Desserts) and real-time search.
+- **Cart & Animated Order Tracker**: Slide-out cart, live pricing, and visual multi-stage status progress bar (`PLACED` ➔ `PREPARING` ➔ `ON THE WAY` ➔ `DELIVERED`).
 
-### 1. Clone the repository
+---
+
+## 🚀 Quick Deployment Guide with PM2
+
+### 1. Clone the repository on the server
 ```bash
-git clone <YOUR-REPO-URL>
+git clone https://github.com/AbdurRehman5696/food-ordering-app.git
 cd food-ordering-app
 ```
 
-### 2. Launch with Docker Compose
-```bash
-docker compose up --build -d
-```
-
-### 3. Open in Browser
-- **Frontend App**: [http://localhost](http://localhost)
-- **API Healthcheck**: [http://localhost/api/health](http://localhost/api/health)
-
----
-
-## 💻 Manual Local Development (Without Docker)
-
-### Backend Setup:
+### 2. Backend Setup
 ```bash
 cd backend
 npm install
 cp .env.example .env
-npm run prisma:generate
-npm run seed
-npm run dev
+npx prisma generate
+node src/seed.js
+cd ..
 ```
-*(Backend runs on `http://localhost:5000`)*
 
-### Frontend Setup:
+### 3. Frontend Build
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run build
+cd ..
 ```
-*(Frontend runs on `http://localhost:3000` and automatically proxies `/api` calls to port 5000)*
+
+### 4. Start with PM2
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+### 5. Check Live Status & Logs
+```bash
+pm2 status
+pm2 logs cravingbites-backend
+```
 
 ---
 
-## 📚 Teaching Curriculum & Guides
+## 📖 Complete Lecture & Step-by-Step Guide
 
-For the full student step-by-step deployment guide (including VPS deployment, Nginx reverse proxy configuration, and SSL certificates), check out:
+For the full student lecture guide with Nginx setup, database creation, and zero-downtime updates:
 👉 **[DEPLOYMENT-GUIDE.md](./DEPLOYMENT-GUIDE.md)**
-
----
-
-## 🧪 Quick Test Credentials
-
-| Role | Email | Password |
-|------|-------|----------|
-| **Demo Student** | `student@example.com` | `student123` |
-| **New User** | Create any new account via the **Sign Up** tab | Any 6+ char password |
