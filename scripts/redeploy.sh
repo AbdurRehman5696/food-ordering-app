@@ -4,7 +4,10 @@
 # Run this on your server whenever you push changes to GitHub!
 # ==============================================================================
 
-set -e
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
 
 echo "🚀 [1/5] Pulling latest code from GitHub..."
 git pull origin main
@@ -13,8 +16,8 @@ echo "📦 [2/5] Installing backend dependencies..."
 cd backend
 npm install --production=false
 npx prisma generate
-npx prisma migrate deploy || true
-node src/seed.js || true
+npx prisma migrate deploy
+node src/seed.js
 cd ..
 
 echo "🎨 [3/5] Installing frontend & building production bundle..."
@@ -24,7 +27,11 @@ npm run build
 cd ..
 
 echo "🔄 [4/5] Reloading backend with PM2 zero-downtime..."
-pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js
+if pm2 describe cravingbites-backend >/dev/null 2>&1; then
+  pm2 reload ecosystem.config.js --update-env
+else
+  pm2 start ecosystem.config.js
+fi
 
 echo "💾 [5/5] Saving PM2 state..."
 pm2 save

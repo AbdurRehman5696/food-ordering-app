@@ -4,15 +4,32 @@ const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('cart');
+      const items = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(items)) return [];
+      return items.filter(item =>
+        item &&
+        typeof item.id === 'string' &&
+        Number.isFinite(Number(item.price)) &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0
+      );
+    } catch (error) {
+      console.warn('Ignoring invalid saved cart:', error);
+      return [];
+    }
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(null);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    try {
+      localStorage.setItem('cart', JSON.stringify(cartItems));
+    } catch (error) {
+      console.warn('Unable to save cart:', error);
+    }
   }, [cartItems]);
 
   const addToCart = (product) => {

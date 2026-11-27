@@ -209,10 +209,12 @@ sudo systemctl enable postgresql</code></pre>
     <p>Create the database and dedicated user:</p>
     <pre><code>sudo -u postgres psql</code></pre>
     <p>Execute in SQL prompt:</p>
-    <pre><code>CREATE DATABASE food_order_db;
-CREATE USER fooduser WITH ENCRYPTED PASSWORD 'MySecurePassword123!';
-GRANT ALL PRIVILEGES ON DATABASE food_order_db TO fooduser;
+    <pre><code>CREATE USER fooduser WITH ENCRYPTED PASSWORD 'MySecurePassword123!';
+CREATE DATABASE food_order_db OWNER fooduser;
 \q</code></pre>
+    <p>In the EC2 security group, allow SSH only from your IP and inbound HTTP (80) and
+    HTTPS (443) for visitors. Do not expose PostgreSQL (5432) or the Node API (5000)
+    to the public internet.</p>
 
     <h2>Step 3: Clone Code from GitHub</h2>
     <pre><code>sudo mkdir -p /var/www && sudo chown -R $USER:$USER /var/www
@@ -227,13 +229,15 @@ nano .env</code></pre>
     <p>Set the PostgreSQL connection URL:</p>
     <pre><code>PORT=5000
 DATABASE_URL="postgresql://fooduser:MySecurePassword123!@localhost:5432/food_order_db?schema=public"
-JWT_SECRET="my_super_secret_class_key_2026"
+JWT_SECRET="replace_with_a_random_secret_at_least_32_characters_long"
 CLIENT_URL="http://YOUR_SERVER_IP"</code></pre>
+    <p>Generate a secret with <code>openssl rand -base64 48</code>. Keep <code>backend/.env</code>
+    on the server only; do not commit it.</p>
 
     <h2>Step 5: Setup Backend & Run DB Migrations</h2>
     <pre><code>npm install
 npx prisma generate
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 node src/seed.js     # Seeds initial products and demo student login
 cd ..</code></pre>
 
@@ -254,35 +258,14 @@ pm2 status</code></pre>
 pm2 save</code></pre>
 
     <h2>Step 8: Configure Nginx Web Server</h2>
-    <pre><code>sudo nano /etc/nginx/sites-available/food-ordering-app</code></pre>
-    <p>Paste the configuration:</p>
-    <pre><code>server {
-    listen 80;
-    server_name YOUR_SERVER_IP;
-
-    # 1. Serve compiled React frontend
-    root /var/www/food-ordering-app/frontend/dist;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 2. Reverse proxy /api/ to PM2 Backend
-    location /api/ {
-        proxy_pass http://localhost:5000/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}</code></pre>
+    <p>The EC2/PM2 Nginx config is stored at <code>deploy/nginx/food-ordering-app.conf</code>.
+    Install it using this exact site filename:</p>
+    <pre><code>sudo cp deploy/nginx/food-ordering-app.conf /etc/nginx/sites-available/food-ordering-app</code></pre>
+    <p>The config uses <code>server_name _;</code> for an EC2 public IP. For a domain,
+    edit the directive in the copied config before enabling it.</p>
 
     <p>Enable and restart Nginx:</p>
-    <pre><code>sudo ln -s /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/
+    <pre><code>    sudo ln -s /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/food-ordering-app
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl restart nginx</code></pre>

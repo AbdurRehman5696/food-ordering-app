@@ -51,9 +51,7 @@ export default function CartDrawer() {
         body: JSON.stringify({
           items: cartItems,
           address,
-          paymentMethod,
-          totalAmount: total,
-          deliveryFee
+          paymentMethod
         })
       });
 

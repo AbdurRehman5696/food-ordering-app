@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_devops_class_2026';
+const JWT_SECRET = process.env.JWT_SECRET ||
+  (process.env.NODE_ENV === 'production' ? '' : 'development-only-change-me');
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in production');
+}
+if (process.env.NODE_ENV === 'production' && JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters in production');
+}
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];

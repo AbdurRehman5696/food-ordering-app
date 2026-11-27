@@ -106,6 +106,9 @@ sudo apt install -y postgresql postgresql-contrib
 sudo systemctl start postgresql
 sudo systemctl enable postgresql
 ```
+For the EC2 security group, allow SSH only from your IP, and allow inbound HTTP (80)
+and HTTPS (443) for visitors. Do not expose PostgreSQL (5432) or the Node API (5000)
+to the public internet.
 
 Log in to the PostgreSQL prompt:
 ```bash
@@ -114,9 +117,8 @@ sudo -u postgres psql
 
 Run these SQL commands inside `psql` to create the database and user:
 ```sql
-CREATE DATABASE food_order_db;
 CREATE USER fooduser WITH ENCRYPTED PASSWORD 'MySecurePassword123!';
-GRANT ALL PRIVILEGES ON DATABASE food_order_db TO fooduser;
+CREATE DATABASE food_order_db OWNER fooduser;
 \q
 ```
 
@@ -150,10 +152,11 @@ Set the database connection string using the credentials created in Step 2:
 ```ini
 PORT=5000
 DATABASE_URL="postgresql://fooduser:MySecurePassword123!@localhost:5432/food_order_db?schema=public"
-JWT_SECRET="super_secret_production_key_change_me_in_prod"
+JWT_SECRET="PASTE_A_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS"
 CLIENT_URL="http://YOUR_SERVER_IP"
 ```
 Press `CTRL + O`, then `ENTER` to save, and `CTRL + X` to exit `nano`.
+Generate a secret with `openssl rand -base64 48`. Keep `backend/.env` on the server only.
 
 ---
 
@@ -166,7 +169,7 @@ npm install
 
 # Generate Prisma Client & apply database migrations
 npx prisma generate
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 
 # Seed initial gourmet menu items & demo student account
 node src/seed.js
@@ -232,50 +235,19 @@ pm2 save
 
 ## Step 8: Configuring Nginx (Web Server & Reverse Proxy)
 
-Create a new Nginx server configuration:
+The EC2/PM2 Nginx config is stored at `deploy/nginx/food-ordering-app.conf`.
+Install it under this exact site filename:
 ```bash
-sudo nano /etc/nginx/sites-available/food-ordering-app
+sudo cp deploy/nginx/food-ordering-app.conf /etc/nginx/sites-available/food-ordering-app
 ```
 
-Paste the following configuration:
-```nginx
-server {
-    listen 80;
-    server_name YOUR_SERVER_IP;   # e.g., 192.168.1.100 or your domain
-
-    # 1. Frontend: Serve React production build
-    root /var/www/food-ordering-app/frontend/dist;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 2. Backend: Reverse Proxy /api/ requests to PM2 Node.js process
-    location /api/ {
-        proxy_pass http://localhost:5000/api/;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Performance: Enable gzip compression
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml;
-}
-```
-
-Save and exit (`CTRL + O` ➔ `ENTER` ➔ `CTRL + X`).
+The config defaults to `server_name _;` for an EC2 public IP. For a domain, edit the
+directive in the copied config before enabling it.
 
 Enable the site and restart Nginx:
 ```bash
 # Enable site configuration
-sudo ln -s /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/food-ordering-app
 
 # Remove default site
 sudo rm -f /etc/nginx/sites-enabled/default
@@ -316,7 +288,7 @@ git pull origin main
 cd backend
 npm install
 npx prisma generate
-npx prisma migrate deploy || true
+npx prisma migrate deploy
 cd ..
 
 # 3. Rebuild React frontend

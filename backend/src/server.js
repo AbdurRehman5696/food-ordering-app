@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const prisma = require('./lib/prisma');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,15 +25,44 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 
 // DevOps / Student Healthcheck endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'UP',
-    service: 'CravingBites Food Ordering API',
-    timestamp: new Date().toISOString(),
-    uptimeSeconds: Math.floor(process.uptime()),
-    environment: process.env.NODE_ENV || 'development'
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({
+      status: 'UP',
+      database: 'CONNECTED',
+      service: 'CravingBites Food Ordering API',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  } catch (error) {
+    console.error('Health check database query failed:', error);
+    res.status(503).json({
+      status: 'DOWN',
+      database: 'DISCONNECTED',
+      service: 'CravingBites Food Ordering API'
+    });
+  }
 });
+
+let isShuttingDown = false;
+
+function shutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  server.close(async () => {
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      console.error('Failed to disconnect Prisma client:', error);
+      process.exitCode = 1;
+    }
+  });
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 // Root welcome endpoint
 app.get('/', (req, res) => {
@@ -46,7 +77,20 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return next(error);
+  }
+  const status = error.status || 500;
+  if (status >= 500) {
+    console.error('Unhandled request error:', error);
+  }
+  res.status(status).json({
+    error: status >= 500 ? 'Internal server error' : 'Invalid request'
+  });
+});
+
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`===============================================`);
   console.log(`🚀 CravingBites Backend is running on port ${PORT}`);
   console.log(`🩺 Healthcheck: http://localhost:${PORT}/api/health`);

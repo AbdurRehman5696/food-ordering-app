@@ -10,35 +10,51 @@ import OrdersModal from './components/OrdersModal';
 export default function App() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productsError, setProductsError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   
   const menuRef = useRef(null);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams();
-      if (selectedCategory && selectedCategory !== 'All') {
-        queryParams.append('category', selectedCategory);
-      }
-      if (searchQuery) {
-        queryParams.append('search', searchQuery);
-      }
-
-      const res = await fetch(`/api/products?${queryParams.toString()}`);
-      const data = await res.json();
-      setProducts(data);
-    } catch (err) {
-      console.error('Failed to load products:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory, searchQuery]);
+    const controller = new AbortController();
+    const loadProducts = async () => {
+      setLoading(true);
+      setProductsError('');
+      try {
+        const queryParams = new URLSearchParams();
+        if (selectedCategory && selectedCategory !== 'All') {
+          queryParams.append('category', selectedCategory);
+        }
+        if (searchQuery) {
+          queryParams.append('search', searchQuery);
+        }
+
+        const res = await fetch(`/api/products?${queryParams.toString()}`, {
+          signal: controller.signal
+        });
+        if (!res.ok) {
+          throw new Error('Unable to load menu items. Please try again.');
+        }
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          throw new Error('The menu response was invalid.');
+        }
+        setProducts(data);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setProductsError(err.message || 'Unable to load menu items.');
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+    loadProducts();
+    return () => controller.abort();
+  }, [selectedCategory, searchQuery, reloadKey]);
 
   const scrollToMenu = () => {
     menuRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -80,6 +96,17 @@ export default function App() {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
               <div key={n} className="bg-slate-200 h-72 rounded-3xl" />
             ))}
+          </div>
+        ) : productsError ? (
+          <div className="text-center py-20 bg-white rounded-3xl border border-red-200">
+            <h3 className="text-lg font-bold text-slate-800">Menu unavailable</h3>
+            <p className="text-sm text-red-600 mt-2">{productsError}</p>
+            <button
+              onClick={() => setReloadKey((key) => key + 1)}
+              className="mt-4 px-4 py-2 bg-brand-50 text-brand-700 text-xs font-bold rounded-xl hover:bg-brand-100"
+            >
+              Try again
+            </button>
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-slate-200/80">

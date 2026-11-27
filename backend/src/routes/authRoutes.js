@@ -1,26 +1,25 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
-let prisma;
-try {
-  prisma = new PrismaClient();
-} catch (e) {
-  console.warn('Prisma client initialization warning:', e.message);
-}
-
-// In-memory fallback if database container is not yet initialized during local testing
-const memoryUsers = [];
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const { name, email, password } = body;
 
-    if (!name || !email || !password) {
+    if (
+      typeof name !== 'string' ||
+      !name.trim() ||
+      typeof email !== 'string' ||
+      !email.trim() ||
+      typeof password !== 'string' ||
+      !password
+    ) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
@@ -28,69 +27,32 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedName = name.trim();
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Try DB first
-    if (prisma) {
-      try {
-        const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-        if (existingUser) {
-          return res.status(400).json({ error: 'An account with this email already exists' });
-        }
-
-        const newUser = await prisma.user.create({
-          data: {
-            name,
-            email: email.toLowerCase(),
-            password: hashedPassword,
-            role: 'customer'
-          }
-        });
-
-        const token = jwt.sign(
-          { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-        );
-
-        return res.status(201).json({
-          message: 'Registration successful!',
-          token,
-          user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role }
-        });
-      } catch (dbErr) {
-        console.warn('Database write failed, using fallback in-memory store:', dbErr.message);
+    const newUser = await prisma.user.create({
+      data: {
+        name: normalizedName,
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: 'customer'
       }
-    }
-
-    // Fallback store
-    const existing = memoryUsers.find(u => u.email === email.toLowerCase());
-    if (existing) {
-      return res.status(400).json({ error: 'An account with this email already exists' });
-    }
-
-    const memUser = {
-      id: 'user_' + Date.now(),
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role: 'customer',
-      createdAt: new Date()
-    };
-    memoryUsers.push(memUser);
-
+    });
     const token = jwt.sign(
-      { id: memUser.id, email: memUser.email, name: memUser.name, role: memUser.role },
+      { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     res.status(201).json({
-      message: 'Registration successful! (Demo fallback)',
+      message: 'Registration successful!',
       token,
-      user: { id: memUser.id, name: memUser.name, email: memUser.email, role: memUser.role }
+      user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role }
     });
   } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error during registration' });
   }
@@ -99,38 +61,20 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const { email, password } = body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    let user = null;
-
-    if (prisma) {
-      try {
-        user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-      } catch (dbErr) {
-        console.warn('Database read failed, falling back to in-memory store:', dbErr.message);
-      }
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    if (!user) {
-      user = memoryUsers.find(u => u.email === email.toLowerCase());
-    }
-
-    // Seeded demo user support
-    if (!user && email.toLowerCase() === 'student@example.com' && password === 'student123') {
-      const demoHashed = await bcrypt.hash('student123', 10);
-      user = {
-        id: 'demo-student-id',
-        name: 'Alex Student',
-        email: 'student@example.com',
-        password: demoHashed,
-        role: 'customer'
-      };
-      memoryUsers.push(user);
-    }
+    const user = await prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() }
+    });
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });

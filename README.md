@@ -28,6 +28,7 @@ An animated full-stack food delivery application built for teaching **Linux & PM
 - **⚡ 1-Click Demo Login (`student@example.com` / `student123`)** for immediate classroom testing.
 - **Menu Catalog**: Category filter pills (Burgers, Pizzas, Drinks, Desserts) and real-time search.
 - **Cart & Animated Order Tracker**: Slide-out cart, live pricing, and visual multi-stage status progress bar (`PLACED` ➔ `PREPARING` ➔ `ON THE WAY` ➔ `DELIVERED`).
+- **EC2 deployment files**: PM2 config in `ecosystem.config.js`; bare-metal Nginx site config in `deploy/nginx/food-ordering-app.conf` (separate from Docker's `frontend/nginx.conf`).
 
 ---
 
@@ -45,6 +46,7 @@ cd backend
 npm install
 cp .env.example .env
 npx prisma generate
+npx prisma migrate deploy
 node src/seed.js
 cd ..
 ```
