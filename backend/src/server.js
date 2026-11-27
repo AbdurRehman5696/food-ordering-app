@@ -11,11 +11,18 @@ const prisma = require('./lib/prisma');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const configuredOrigins = (process.env.CLIENT_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = configuredOrigins.length > 0
+  ? configuredOrigins
+  : ['http://localhost:3000'];
 
 // Middleware
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());

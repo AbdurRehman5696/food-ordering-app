@@ -79,9 +79,48 @@ const sampleProducts = [
 ];
 
 async function main() {
+  const configuredSuperAdmin = Boolean(
+    (process.env.SUPER_ADMIN_EMAIL || '').trim() ||
+    (process.env.SUPER_ADMIN_PASSWORD || '')
+  );
+  const emailValue = configuredSuperAdmin
+    ? process.env.SUPER_ADMIN_EMAIL
+    : process.env.ADMIN_EMAIL;
+  const superAdminPassword = configuredSuperAdmin
+    ? process.env.SUPER_ADMIN_PASSWORD
+    : process.env.ADMIN_PASSWORD;
+  const superAdminEmail = emailValue && emailValue.trim().toLowerCase();
+
+  if (Boolean(superAdminEmail) !== Boolean(superAdminPassword)) {
+    throw new Error('Set both SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD to provision the super admin');
+  }
+  if (superAdminPassword && superAdminPassword.length < 12) {
+    throw new Error('SUPER_ADMIN_PASSWORD must be at least 12 characters');
+  }
+
   console.log('🌱 Seeding database...');
 
-  // Create demo student user
+  if (superAdminEmail) {
+    const hashedSuperAdminPassword = await bcrypt.hash(superAdminPassword, 12);
+    const superAdmin = await prisma.user.upsert({
+      where: { email: superAdminEmail },
+      update: {
+        name: 'CravingBites Super Admin',
+        password: hashedSuperAdminPassword,
+        role: 'admin'
+      },
+      create: {
+        name: 'CravingBites Super Admin',
+        email: superAdminEmail,
+        password: hashedSuperAdminPassword,
+        role: 'admin'
+      }
+    });
+    console.log(`🛡️ Super admin provisioned: ${superAdmin.email}`);
+  } else {
+    console.warn('Super admin credentials are unset; no super admin account was provisioned.');
+  }
+
   const hashedPassword = await bcrypt.hash('student123', 10);
   const user = await prisma.user.upsert({
     where: { email: 'student@example.com' },
@@ -94,35 +133,6 @@ async function main() {
     }
   });
   console.log(`👤 Seeded demo user: ${user.email} (password: student123)`);
-
-  const adminEmail = process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL.trim().toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (Boolean(adminEmail) !== Boolean(adminPassword)) {
-    throw new Error('Set both ADMIN_EMAIL and ADMIN_PASSWORD to provision an admin account');
-  }
-  if (adminEmail) {
-    if (adminPassword.length < 12) {
-      throw new Error('ADMIN_PASSWORD must be at least 12 characters');
-    }
-    const hashedAdminPassword = await bcrypt.hash(adminPassword, 12);
-    const admin = await prisma.user.upsert({
-      where: { email: adminEmail },
-      update: {
-        name: 'CravingBites Admin',
-        password: hashedAdminPassword,
-        role: 'admin'
-      },
-      create: {
-        name: 'CravingBites Admin',
-        email: adminEmail,
-        password: hashedAdminPassword,
-        role: 'admin'
-      }
-    });
-    console.log(`🛡️ Admin account provisioned: ${admin.email}`);
-  } else {
-    console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are unset; no admin account was provisioned.');
-  }
 
   // Seed menu products
   for (const item of sampleProducts) {
