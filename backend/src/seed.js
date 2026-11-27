@@ -95,6 +95,35 @@ async function main() {
   });
   console.log(`👤 Seeded demo user: ${user.email} (password: student123)`);
 
+  const adminEmail = process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL.trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (Boolean(adminEmail) !== Boolean(adminPassword)) {
+    throw new Error('Set both ADMIN_EMAIL and ADMIN_PASSWORD to provision an admin account');
+  }
+  if (adminEmail) {
+    if (adminPassword.length < 12) {
+      throw new Error('ADMIN_PASSWORD must be at least 12 characters');
+    }
+    const hashedAdminPassword = await bcrypt.hash(adminPassword, 12);
+    const admin = await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: {
+        name: 'CravingBites Admin',
+        password: hashedAdminPassword,
+        role: 'admin'
+      },
+      create: {
+        name: 'CravingBites Admin',
+        email: adminEmail,
+        password: hashedAdminPassword,
+        role: 'admin'
+      }
+    });
+    console.log(`🛡️ Admin account provisioned: ${admin.email}`);
+  } else {
+    console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are unset; no admin account was provisioned.');
+  }
+
   // Seed menu products
   for (const item of sampleProducts) {
     const existing = await prisma.product.findFirst({ where: { name: item.name } });

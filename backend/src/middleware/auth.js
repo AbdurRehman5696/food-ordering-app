@@ -27,7 +27,15 @@ function authenticateToken(req, res, next) {
   });
 }
 
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Administrator access required' });
+  }
+  next();
+}
+
 module.exports = {
   authenticateToken,
+  requireAdmin,
   JWT_SECRET
 };
