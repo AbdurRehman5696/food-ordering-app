@@ -6,8 +6,10 @@ import CartDrawer from './components/CartDrawer';
 import AuthModal from './components/AuthModal';
 import OrderSuccessModal from './components/OrderSuccessModal';
 import OrdersModal from './components/OrdersModal';
+import AdminPortal from './components/AdminPortal';
+import { useAuth } from './context/AuthContext';
 
-export default function App() {
+function Storefront() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [productsError, setProductsError] = useState('');
@@ -134,6 +136,8 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© 2026 CravingBites — Full-Stack Educational Deployment Demo.</p>
           <div className="flex gap-4 text-xs font-semibold text-slate-600">
+            <a href="/admin" className="text-brand-700 hover:text-brand-900">Admin sign in</a>
+            <span>•</span>
             <span>Node.js / Express</span>
             <span>•</span>
             <span>React + Vite + Tailwind</span>
@@ -152,4 +156,25 @@ export default function App() {
       <OrdersModal />
     </div>
   );
+}
+
+export default function App() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const { user, token } = useAuth();
+  const isAdminRoute = path === '/admin';
+  const isAuthenticatedAdmin = user?.role === 'admin' && Boolean(token);
+
+  useEffect(() => {
+    if (isAuthenticatedAdmin && !isAdminRoute) {
+      window.location.replace('/admin');
+    }
+  }, [isAdminRoute, isAuthenticatedAdmin]);
+
+  if (isAdminRoute) {
+    return <AdminPortal />;
+  }
+  if (isAuthenticatedAdmin) {
+    return null;
+  }
+  return <Storefront />;
 }

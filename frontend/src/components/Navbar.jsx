@@ -67,6 +67,14 @@ export default function Navbar({ searchQuery, setSearchQuery, selectedCategory, 
             {/* Auth Controls */}
             {user ? (
               <div className="flex items-center gap-2">
+                {user.role === 'admin' && (
+                  <a
+                    href="/admin"
+                    className="hidden sm:inline-flex px-3 py-2 rounded-xl text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100"
+                  >
+                    Admin Dashboard
+                  </a>
+                )}
                 <button
                   onClick={() => setIsOrdersOpen(true)}
                   className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"

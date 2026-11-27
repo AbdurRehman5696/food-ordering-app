@@ -37,7 +37,10 @@ export function AuthProvider({ children }) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setIsAuthModalOpen(false);
-      return { success: true };
+      if (data.user.role === 'admin' && window.location.pathname !== '/admin') {
+        window.location.assign('/admin');
+      }
+      return { success: true, user: data.user };
     } catch (err) {
       return { success: false, error: err.message };
     }

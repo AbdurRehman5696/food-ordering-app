@@ -154,9 +154,20 @@ PORT=5000
 DATABASE_URL="postgresql://fooduser:MySecurePassword123!@localhost:5432/food_order_db?schema=public"
 JWT_SECRET="PASTE_A_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS"
 CLIENT_URL="http://YOUR_SERVER_IP"
+SUPER_ADMIN_EMAIL=
+SUPER_ADMIN_PASSWORD=
 ```
 Press `CTRL + O`, then `ENTER` to save, and `CTRL + X` to exit `nano`.
 Generate a secret with `openssl rand -base64 48`. Keep `backend/.env` on the server only.
+`CLIENT_URL` must be the browser-visible EC2 IP or domain (no `/api` suffix). Keep
+`localhost` in `DATABASE_URL` when PostgreSQL is installed on the same EC2 instance.
+Set `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` to the administrator email and a unique
+password of at least 12 characters. Run `node src/seed.js` from `backend/` after setting
+them to provision the super admin. The legacy `ADMIN_EMAIL` and `ADMIN_PASSWORD` names
+are also supported.
+The production frontend needs no API URL variable: it calls relative `/api` routes, and
+Nginx proxies them to backend `localhost:5000`. `frontend/.env` with
+`VITE_API_URL=http://localhost:5000` is for local Vite development only.
 
 ---
 
@@ -177,6 +188,8 @@ node src/seed.js
 # Return to root directory
 cd ..
 ```
+The seed command provisions the super admin from `SUPER_ADMIN_EMAIL` and
+`SUPER_ADMIN_PASSWORD` in `backend/.env`. The dashboard is at `http://YOUR_SERVER_IP/admin`.
 
 ---
 

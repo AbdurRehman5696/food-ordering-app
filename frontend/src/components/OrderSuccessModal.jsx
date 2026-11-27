@@ -1,23 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CheckCircle2, Clock, ChefHat, Bike, Home, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export default function OrderSuccessModal() {
   const { activeOrder, setActiveOrder } = useCart();
-  const [currentStep, setCurrentStep] = useState(1);
-
-  useEffect(() => {
-    if (!activeOrder) return;
-
-    // Simulate animated order advancement for classroom demonstration
-    const timer1 = setTimeout(() => setCurrentStep(2), 2500); // Kitchen preparing
-    const timer2 = setTimeout(() => setCurrentStep(3), 5500); // Out for delivery
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-    };
-  }, [activeOrder]);
 
   if (!activeOrder) return null;
 
@@ -27,6 +13,13 @@ export default function OrderSuccessModal() {
     { num: 3, label: 'On The Way', icon: Bike },
     { num: 4, label: 'Delivered', icon: Home }
   ];
+  const statusSteps = {
+    PLACED: 1,
+    PREPARING: 2,
+    OUT_FOR_DELIVERY: 3,
+    DELIVERED: 4
+  };
+  const currentStep = statusSteps[activeOrder.status] || 1;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">

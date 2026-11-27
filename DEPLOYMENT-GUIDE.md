@@ -108,8 +108,19 @@ PORT=5000
 DATABASE_URL="postgresql://fooduser:MyStrongPassword123!@localhost:5432/food_order_db?schema=public"
 JWT_SECRET="PASTE_A_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS"
 CLIENT_URL="http://YOUR_SERVER_IP"
+SUPER_ADMIN_EMAIL=
+SUPER_ADMIN_PASSWORD=
 ```
 Generate a secret with `openssl rand -base64 48`. Keep this file on the server only; do not commit it.
+`CLIENT_URL` is the browser-visible frontend origin (your EC2 public IP or domain, without a path).
+PostgreSQL stays on `localhost` in `DATABASE_URL` when it runs on this EC2 instance.
+Set `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` to the administrator email and a unique
+password of at least 12 characters. After setting them, run `node src/seed.js` from
+`backend/` to provision the super admin. The legacy `ADMIN_EMAIL` and `ADMIN_PASSWORD`
+names are also supported.
+For local Vite development, `frontend/.env` may set `VITE_API_URL=http://localhost:5000`.
+On EC2, the built frontend uses relative `/api` requests and Nginx proxies them to backend
+`localhost:5000`; do not set a browser API URL to `localhost` in production.
 
 ---
 
@@ -130,6 +141,8 @@ npm install
 npm run build        # Compiles React into the production 'dist/' folder
 cd ..
 ```
+The seed command provisions the super admin from `SUPER_ADMIN_EMAIL` and
+`SUPER_ADMIN_PASSWORD` in `backend/.env`. Sign in at `http://YOUR_SERVER_IP/admin`.
 
 ---
 

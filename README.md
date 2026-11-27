@@ -26,6 +26,7 @@ An animated full-stack food delivery application built for teaching **Linux & PM
 
 - **Auth**: Registration, Login, password hashing with `bcryptjs`, and JWT tokens.
 - **⚡ 1-Click Demo Login (`student@example.com` / `student123`)** for immediate classroom testing.
+- **Admin dashboard (`/admin`)**: protected order overview, customer contact details, and sequential order status management.
 - **Menu Catalog**: Category filter pills (Burgers, Pizzas, Drinks, Desserts) and real-time search.
 - **Cart & Animated Order Tracker**: Slide-out cart, live pricing, and visual multi-stage status progress bar (`PLACED` ➔ `PREPARING` ➔ `ON THE WAY` ➔ `DELIVERED`).
 - **EC2 deployment files**: PM2 config in `ecosystem.config.js`; bare-metal Nginx site config in `deploy/nginx/food-ordering-app.conf` (separate from Docker's `frontend/nginx.conf`).
@@ -45,11 +46,19 @@ cd food-ordering-app
 cd backend
 npm install
 cp .env.example .env
+nano .env
 npx prisma generate
 npx prisma migrate deploy
 node src/seed.js
 cd ..
 ```
+Set `SUPER_ADMIN_EMAIL` and a unique `SUPER_ADMIN_PASSWORD` of at least 12 characters in
+`backend/.env` before seeding. The super admin can then sign in at `/admin`. The older
+`ADMIN_EMAIL` and `ADMIN_PASSWORD` variable names remain supported. Customer passwords are
+hashed and are never shown in the dashboard.
+For local Vite development, `frontend/.env` can set `VITE_API_URL=http://localhost:5000`.
+In production, the frontend uses relative `/api` requests through Nginx, so no frontend API
+URL is needed.
 
 ### 3. Frontend Build
 ```bash

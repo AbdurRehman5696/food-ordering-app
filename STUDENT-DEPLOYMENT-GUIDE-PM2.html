@@ -230,15 +230,24 @@ nano .env</code></pre>
     <pre><code>PORT=5000
 DATABASE_URL="postgresql://fooduser:MySecurePassword123!@localhost:5432/food_order_db?schema=public"
 JWT_SECRET="replace_with_a_random_secret_at_least_32_characters_long"
-CLIENT_URL="http://YOUR_SERVER_IP"</code></pre>
+CLIENT_URL="http://YOUR_SERVER_IP"
+SUPER_ADMIN_EMAIL=
+SUPER_ADMIN_PASSWORD=</code></pre>
     <p>Generate a secret with <code>openssl rand -base64 48</code>. Keep <code>backend/.env</code>
     on the server only; do not commit it.</p>
+    <p><code>CLIENT_URL</code> is the public IP or domain used in the browser. Keep
+    <code>localhost</code> in <code>DATABASE_URL</code> when PostgreSQL runs on this EC2
+    instance. In production, Nginx forwards relative <code>/api</code> requests to backend
+    <code>localhost:5000</code>; <code>VITE_API_URL</code> is only for local Vite development.</p>
+    <p>Set the super admin email and a unique password of at least 12 characters.
+    Run <code>node src/seed.js</code> from <code>backend/</code> after setting them.
+    The legacy <code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD</code> names are also supported.</p>
 
     <h2>Step 5: Setup Backend & Run DB Migrations</h2>
     <pre><code>npm install
 npx prisma generate
 npx prisma migrate deploy
-node src/seed.js     # Seeds initial products and demo student login
+node src/seed.js     # Seeds the super admin, initial products and demo student login
 cd ..</code></pre>
 
     <h2>Step 6: Build React Frontend for Production</h2>
