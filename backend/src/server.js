@@ -98,3 +98,15 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🩺 Healthcheck: http://localhost:${PORT}/api/health`);
   console.log(`===============================================`);
 });
+
+async function checkDatabaseConnection() {
+  try {
+    await prisma.$connect();
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('✅ Database connected successfully');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+  }
+}
+
+checkDatabaseConnection();
