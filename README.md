@@ -35,8 +35,12 @@ An animated full-stack food delivery application built for teaching **Linux & PM
 
 ## 🚀 Quick Deployment Guide with PM2
 
-### Fast automated setup (after cloning)
+### Fast automated setup
 ```bash
+sudo mkdir -p /var/www
+sudo chown -R "$USER":"$USER" /var/www
+cd /var/www
+git clone https://github.com/AbdurRehman5696/food-ordering-app.git
 cd /var/www/food-ordering-app
 chmod +x scripts/setup.sh scripts/redeploy.sh
 ./scripts/setup.sh

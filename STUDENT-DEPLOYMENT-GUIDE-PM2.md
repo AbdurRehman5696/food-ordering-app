@@ -64,10 +64,15 @@ Before starting, ensure you have:
 
 ## Automated Copy-Paste Setup
 
-After cloning the repository, one interactive setup command configures Ubuntu packages,
-PostgreSQL, the backend environment, Prisma, PM2, Nginx, and the production build:
+Run these commands from the Ubuntu server. They clone the repository and then run the
+interactive setup, which configures Ubuntu packages, PostgreSQL, the backend environment,
+Prisma, PM2, Nginx, and the production build:
 
 ```bash
+sudo mkdir -p /var/www
+sudo chown -R "$USER":"$USER" /var/www
+cd /var/www
+git clone https://github.com/AbdurRehman5696/food-ordering-app.git
 cd /var/www/food-ordering-app
 chmod +x scripts/setup.sh scripts/redeploy.sh
 ./scripts/setup.sh
@@ -84,7 +89,7 @@ must be allowed to use `sudo`.
 
 Open your local terminal (PowerShell, macOS Terminal, or Linux terminal) and connect:
 ```bash
-ssh root@YOUR_SERVER_IP
+ssh ubuntu@YOUR_SERVER_IP
 ```
 
 Update your package index and install essential tools:

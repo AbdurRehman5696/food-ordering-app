@@ -186,7 +186,7 @@
 
     <h2>Step 1: Connect to Server & Install Software</h2>
     <p>Connect to your remote Linux VPS using SSH:</p>
-    <pre><code>ssh root@YOUR_SERVER_IP</code></pre>
+    <pre><code>ssh ubuntu@YOUR_SERVER_IP</code></pre>
 
     <p>Update system packages and install Git, Nginx, and build libraries:</p>
     <pre><code>sudo apt update && sudo apt upgrade -y
@@ -225,7 +225,11 @@ cd food-ordering-app</code></pre>
     <h2>Fast Automated Setup</h2>
     <p>From the project directory, run the interactive setup script. It configures Ubuntu
     packages, PostgreSQL, the environment file, Prisma, PM2, Nginx, and the frontend build:</p>
-    <pre><code>cd /var/www/food-ordering-app
+    <pre><code>sudo mkdir -p /var/www
+sudo chown -R $USER:$USER /var/www
+cd /var/www
+git clone https://github.com/AbdurRehman5696/food-ordering-app.git
+cd /var/www/food-ordering-app
 chmod +x scripts/setup.sh scripts/redeploy.sh
 ./scripts/setup.sh</code></pre>
     <p>Run the script as the Ubuntu login user, not as <code>root</code>. It prompts for the

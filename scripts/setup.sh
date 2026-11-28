@@ -64,6 +64,10 @@ ALTER DATABASE food_order_db OWNER TO fooduser;
 SQL
 
 PUBLIC_IP="$(curl -4 -fsS https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')"
+if [[ -z "$PUBLIC_IP" ]]; then
+  echo "Could not detect the public IP or local address."
+  exit 1
+fi
 JWT_SECRET="$(openssl rand -base64 48)"
 
 ESCAPED_ADMIN_EMAIL="$(escape_env_value "$SUPER_ADMIN_EMAIL")"
@@ -96,7 +100,11 @@ npm run build
 cd ..
 
 echo "Starting the backend with PM2..."
-pm2 start ecosystem.config.js
+if pm2 describe cravingbites-backend >/dev/null 2>&1; then
+  pm2 reload ecosystem.config.js --update-env
+else
+  pm2 start ecosystem.config.js
+fi
 pm2 save
 
 STARTUP_OUTPUT="$(pm2 startup systemd --hp "$HOME" 2>&1 || true)"
