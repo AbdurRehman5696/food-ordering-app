@@ -185,8 +185,15 @@
 └────────────────────────────────────────────────────────┘</div>
 
     <h2>Step 1: Connect to Server & Install Software</h2>
-    <p>Connect to your remote Linux VPS using SSH:</p>
-    <pre><code>ssh ubuntu@YOUR_SERVER_IP</code></pre>
+    <p>In your AWS EC2 Security Group, allow inbound <strong>SSH (Port 22)</strong> and <strong>HTTP (Port 80)</strong>. Connect using SSH:</p>
+    <pre><code>ssh -i "path/to/key.pem" ubuntu@YOUR_SERVER_IP</code></pre>
+
+    <p>Enable 1GB swap space (essential on <code>t2.micro</code> / 1GB RAM instances to prevent Vite builds from crashing):</p>
+    <pre><code>sudo fallocate -l 1G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab</code></pre>
 
     <p>Update system packages and install Git, Nginx, and build libraries:</p>
     <pre><code>sudo apt update && sudo apt upgrade -y
@@ -286,14 +293,17 @@ pm2 save</code></pre>
     <p>The config uses <code>server_name _;</code> for an EC2 public IP. For a domain,
     edit the directive in the copied config before enabling it.</p>
 
-    <p>Enable and restart Nginx:</p>
-    <pre><code>    sudo ln -s /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/food-ordering-app
+    <p>Enable and restart Nginx with correct static permissions:</p>
+    <pre><code>sudo ln -sf /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/food-ordering-app
 sudo rm -f /etc/nginx/sites-enabled/default
+sudo chown -R www-data:www-data /var/www/food-ordering-app
+sudo chmod -R 755 /var/www/food-ordering-app
+sudo usermod -a -G www-data $USER
 sudo nginx -t
 sudo systemctl restart nginx</code></pre>
 
     <div class="callout callout-success">
-      <strong>🎉 Congratulations!</strong> Visit <code>http://YOUR_SERVER_IP</code> in your browser to view and interact with the live application.
+      <strong>🎉 Congratulations!</strong> Visit <code>http://YOUR_SERVER_IP</code> (Port 80) in your browser to view and interact with the live application.
     </div>
 
     <h2>Day-2 DevOps: Zero-Downtime Redeployment</h2>
@@ -340,6 +350,17 @@ pm2 reload cravingbites-backend</code></pre>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <h2>🛠️ Troubleshooting Common Issues</h2>
+    <div class="callout">
+      <p><strong>Issue: 500 Internal Server Error</strong></p>
+      <p>Nginx cannot find <code>frontend/dist/index.html</code> (missing frontend build, wrong clone directory, or permission denied for <code>www-data</code>), causing an infinite internal rewrite cycle. Run <code>sudo tail -n 50 /var/log/nginx/error.log</code> to check the exact error.</p>
+      <p><strong>Fix:</strong> Ensure the project is in <code>/var/www/food-ordering-app</code>, run <code>cd frontend && npm run build</code>, grant permissions with <code>sudo chown -R www-data:www-data /var/www/food-ordering-app && sudo chmod -R 755 /var/www/food-ordering-app</code>, and browse to <code>http://YOUR_SERVER_IP</code> on port 80 (do not use <code>:5000</code>).</p>
+    </div>
+    <div class="callout">
+      <p><strong>Issue: 502 Bad Gateway</strong></p>
+      <p>The Node.js backend is stopped or crashed. Check <code>pm2 status</code> and view error logs with <code>pm2 logs cravingbites-backend</code>. Verify PostgreSQL is active with <code>sudo systemctl status postgresql</code>.</p>
     </div>
 
   </div>

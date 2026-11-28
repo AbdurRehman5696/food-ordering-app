@@ -35,6 +35,17 @@ escape_env_value() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+if [[ $(free -m | awk '/^Swap:/ {print $2}') -lt 512 ]]; then
+  echo "Enabling 1GB swap space for low-memory instances..."
+  sudo fallocate -l 1G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile
+  sudo swapon /swapfile || true
+  if ! grep -q '/swapfile' /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+  fi
+fi
+
 echo "Installing system packages..."
 sudo apt update
 sudo apt upgrade -y
@@ -115,10 +126,16 @@ if [[ -n "$STARTUP_COMMAND" ]]; then
   pm2 save
 fi
 
-echo "Configuring Nginx..."
+echo "Configuring Nginx and setting permissions..."
 sudo cp deploy/nginx/food-ordering-app.conf /etc/nginx/sites-available/food-ordering-app
 sudo ln -sfn /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled/food-ordering-app
 sudo rm -f /etc/nginx/sites-enabled/default
+
+# Ensure Nginx (www-data) can read static files
+sudo chown -R www-data:www-data "$ROOT_DIR"
+sudo chmod -R 755 "$ROOT_DIR"
+sudo usermod -a -G www-data "$USER" || true
+
 sudo nginx -t
 sudo systemctl restart nginx
 

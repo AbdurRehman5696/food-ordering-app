@@ -87,11 +87,29 @@ must be allowed to use `sudo`.
 
 ## Step 1: Connecting to the Server & Installing Packages
 
+### 1.1 Configure EC2 Security Group
+In the AWS EC2 Management Console, ensure your instance's Inbound Security Group rules allow:
+- **SSH (Port 22)**: For terminal access
+- **HTTP (Port 80)**: For public web traffic
+*(Do not open port 5000 or 5432 to the public internet; Nginx receives traffic on port 80 and talks to Node on port 5000 internally).*
+
+### 1.2 Connect via SSH
 Open your local terminal (PowerShell, macOS Terminal, or Linux terminal) and connect:
 ```bash
-ssh ubuntu@YOUR_SERVER_IP
+ssh -i "path/to/key.pem" ubuntu@YOUR_SERVER_IP
 ```
 
+### 1.3 Enable 1GB Swap Memory (Crucial for t2.micro / 1GB RAM instances)
+AWS `t2.micro` instances have only 1 GB of physical RAM. Without swap space, `npm run build` or `npm install` may get killed by the Linux Out-Of-Memory (OOM) killer:
+```bash
+sudo fallocate -l 1G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+### 1.4 Update System & Install Packages
 Update your package index and install essential tools:
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -286,6 +304,11 @@ sudo ln -s /etc/nginx/sites-available/food-ordering-app /etc/nginx/sites-enabled
 # Remove default site
 sudo rm -f /etc/nginx/sites-enabled/default
 
+# Grant Nginx (www-data) read and execute permissions on the project
+sudo chown -R www-data:www-data /var/www/food-ordering-app
+sudo chmod -R 755 /var/www/food-ordering-app
+sudo usermod -a -G www-data $USER
+
 # Test Nginx syntax
 sudo nginx -t
 
@@ -357,6 +380,15 @@ pm2 save
 | Save current list for reboot | `pm2 save` |
 
 ### Common Issues & Quick Fixes:
+
+* **Issue: "500 Internal Server Error"**
+  * **Cause:** Nginx cannot find `/var/www/food-ordering-app/frontend/dist/index.html` (missing frontend build, repo cloned in `/home/ubuntu` instead of `/var/www`, or missing read permissions for `www-data`), triggering an infinite internal rewrite loop. It can also happen if attempting to access `:5000` directly.
+  * **Fix:**
+    1. Check Nginx error logs: `sudo tail -n 50 /var/log/nginx/error.log`
+    2. Ensure the repo is in `/var/www/food-ordering-app` (move from `/home/ubuntu` if needed).
+    3. Build the frontend: `cd /var/www/food-ordering-app/frontend && npm install && npm run build`. Verify `ls -la dist/index.html`.
+    4. Fix permissions: `sudo chown -R www-data:www-data /var/www/food-ordering-app && sudo chmod -R 755 /var/www/food-ordering-app`.
+    5. Visit `http://YOUR_SERVER_IP` on port 80. Do **not** append `:5000` in your browser.
 
 * **Issue: "502 Bad Gateway"**
   * **Cause:** The Node.js backend is not running or crashed.
