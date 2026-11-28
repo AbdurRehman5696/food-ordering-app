@@ -62,6 +62,22 @@ Before starting, ensure you have:
 - [x] SSH access to your server (`ssh username@your-server-ip`).
 - [x] A GitHub account and the repository URL.
 
+## Automated Copy-Paste Setup
+
+After cloning the repository, one interactive setup command configures Ubuntu packages,
+PostgreSQL, the backend environment, Prisma, PM2, Nginx, and the production build:
+
+```bash
+cd /var/www/food-ordering-app
+chmod +x scripts/setup.sh scripts/redeploy.sh
+./scripts/setup.sh
+```
+
+The script prompts for the super-admin email and password, generates a database password
+and JWT secret automatically, and prints the server URL at completion. Run it as the
+Ubuntu login user, not as `root`. The script requires outbound internet access and
+must be allowed to use `sudo`.
+
 ---
 
 ## Step 1: Connecting to the Server & Installing Packages
@@ -317,7 +333,7 @@ pm2 reload cravingbites-backend
 pm2 save
 ```
 
-*(You can also simply run the included automated script: `./scripts/redeploy.sh`)*
+*(You can also simply run the included automated script: `chmod +x ./scripts/redeploy.sh && ./scripts/redeploy.sh`)*
 
 ---
 

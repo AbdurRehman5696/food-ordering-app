@@ -222,6 +222,15 @@ cd /var/www
 git clone https://github.com/AbdurRehman5696/food-ordering-app.git
 cd food-ordering-app</code></pre>
 
+    <h2>Fast Automated Setup</h2>
+    <p>From the project directory, run the interactive setup script. It configures Ubuntu
+    packages, PostgreSQL, the environment file, Prisma, PM2, Nginx, and the frontend build:</p>
+    <pre><code>cd /var/www/food-ordering-app
+chmod +x scripts/setup.sh scripts/redeploy.sh
+./scripts/setup.sh</code></pre>
+    <p>Run the script as the Ubuntu login user, not as <code>root</code>. It prompts for the
+    super-admin email and password and creates the database password and JWT secret automatically.</p>
+
     <h2>Step 4: Configure Backend Environment</h2>
     <pre><code>cd backend
 cp .env.example .env
@@ -285,6 +294,10 @@ sudo systemctl restart nginx</code></pre>
 
     <h2>Day-2 DevOps: Zero-Downtime Redeployment</h2>
     <p>Whenever you push new code to GitHub, update the server with:</p>
+    <pre><code>cd /var/www/food-ordering-app
+chmod +x ./scripts/redeploy.sh
+./scripts/redeploy.sh</code></pre>
+    <p>Or run the same steps manually:</p>
     <pre><code>cd /var/www/food-ordering-app
 git pull origin main
 cd backend && npm install && cd ..
